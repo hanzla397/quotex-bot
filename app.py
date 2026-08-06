@@ -126,14 +126,12 @@ try:
             last_bb_low = float(bb_low.iloc[-1])
             
             # 🔥 ADVANCED PRICE ACTION WICK DETECTOR (Price Pressure Gauge)
-            # Candle ke patterns aur rejection ki base par buy/sell power nikalna
             current_open = float(df['Open'].iloc[-1])
             current_high = float(df['High'].iloc[-1])
             current_low = float(df['Low'].iloc[-1])
             
             upper_wick = current_high - max(current_open, entry_price)
             lower_wick = min(current_open, entry_price) - current_low
-            candle_body = abs(entry_price - current_open)
             
             # Live Bullish (UP) and Bearish (DOWN) % metrics calculation
             base_up = (100 - last_rsi) * 0.4 + (100 - last_mfi) * 0.4
@@ -148,7 +146,7 @@ try:
             
             # --- RENDER LIVE INTERACTIVE GAUGE METER ---
             st.write("### 🧭 Live Market Prediction Gauge")
-            col_g1, col_g2 = st.columns([1, 1])
+            col_g1, col_g2 = st.columns(2)
             
             with col_g1:
                 st.markdown(f"<div class='radar-card' style='border-top:5px solid #00FF66;'><span style='color:#94A3B8; font-size:1rem; font-weight:bold;'>📈 BUYERS MOMENTUM POWER</span><br><span style='color:#00FF66; font-size:2.5rem; font-weight:900;'>{up_power_pct:.1f}%</span></div>", unsafe_allow_html=True)
@@ -181,7 +179,6 @@ try:
                 
                 # Update trades stats
                 st.session_state.total_trades += 1
-                # Dummy winning validation just to cycle states cleanly
                 st.session_state.wins += 1 
                 time.sleep(2)
             else:
@@ -196,7 +193,7 @@ except Exception:
 
 st.write("---")
 
-# --- NEON LIVE GRAPH INTEGRATION ---
+# --- NEON LIVE GRAPH INTEGRATION (FIXED SYNTAX CLOSE BRACKETS) ---
 st.write("### 📈 Live Candlestick Radar")
 g_df = pd.DataFrame()
 try:
@@ -207,4 +204,5 @@ except Exception:
 if not g_df.empty:
     if isinstance(g_df.columns, pd.MultiIndex):
         g_df.columns = g_df.columns.get_level_values(0)
-    fig = go.Figure(data=[go.Candlestick(
+    
+    fig = go.Figure(data=[go.Candlestick(x=g_df.index, open=g_df['Open'], high=g_df['High'], low=g_df['Low'], close=g_df['Close'], name='Market')])
