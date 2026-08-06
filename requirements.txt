@@ -1,7 +1,5 @@
 streamlit
 pandas
-numpy
 yfinance
 requests
-alpaca-trade-api
 plotly
