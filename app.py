@@ -86,7 +86,6 @@ if st.button("⚡ GENERATE INSTANT SIGNAL (2s DEEP SCAN)", use_container_width=T
     status_place = st.empty()
     
     with st.spinner("Executing real-time price action audit (Max 2s)..."):
-        # Explicit tiny delay for visual sync and processing pipeline
         time.sleep(1.2)
         
         try:
@@ -97,7 +96,7 @@ if st.button("⚡ GENERATE INSTANT SIGNAL (2s DEEP SCAN)", use_container_width=T
             }
             fetch_interval = timeframe_seconds_map[timeframe]
             
-            # Fetch low-latency financial packets
+            # Fetch low-latency financial data packets
             df = yf.download(asset, period="1d", interval=fetch_interval, progress=False)
             
             if df.empty:
@@ -169,7 +168,6 @@ if st.button("⚡ GENERATE INSTANT SIGNAL (2s DEEP SCAN)", use_container_width=T
                     
                     # --- TARGET DIRECTION OUTPUT ---
                     direction = "HOLD"
-                    # High precision triggers with boundary scaling overrides
                     if entry_price >= (last_bb_up - 0.00015) or down_power_pct >= 62.0 or last_rsi >= 68:
                         direction = "PUT"
                     elif entry_price <= (last_bb_low + 0.00015) or up_power_pct >= 62.0 or last_rsi <= 32:
@@ -177,18 +175,20 @@ if st.button("⚡ GENERATE INSTANT SIGNAL (2s DEEP SCAN)", use_container_width=T
                         
                     st.write("### 📢 Generated Next Candle Instruction")
                     clean_name = asset.replace("=X", "")
-                    
                     st.session_state.total_trades += 1
+                    
                     st.components.v1.html('<audio autoplay><source src="https://mixkit.co" type="audio/wav"></audio>', height=0)
                     st.balloons()
                     
                     if direction == "PUT":
                         msg = f"🔴 **PREDICTION: CHOOSE PUT (DOWN) 📉**\nPair: {clean_name} | Entry Base: {entry_price:.5f} | Selected TF: {timeframe} | Expiry Target: {trade_expiry}"
                         st.error(msg)
-                        st.session_state.wins += 1 # Base simulator increment
                     else:
                         msg = f"🟢 **PREDICTION: CHOOSE CALL (UP) 📈**\nPair: {clean_name} | Entry Base: {entry_price:.5f} | Selected TF: {timeframe} | Expiry Target: {trade_expiry}"
                         st.success(msg)
-                        st.session_state.wins += 1
                         
-                    # Dispatch to Mobile Notification endpoint
+                    # Dispatch payload to Telegram
+                    url = f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage"
+                    requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": f"💎 **V10 INSTANT TRIGGER ALERT** 💎\n\n{msg}", "parse_mode": "Markdown"})
+        
+        except Exception as err:
