@@ -1,63 +1,73 @@
 import streamlit as st
 import pandas as pd
 import yfinance as yf
+import alpaca_trade_api as tradeapi
 import requests
 import time
-import plotly.graph_objects as go
 from datetime import datetime
 import zoneinfo
+import plotly.graph_objects as go
 
-# --- ⚠️ APNI DETAILS YAHAN LIKHEN ⚠️ ---
-TELEGRAM_TOKEN = "8996892978:AAEWuSd2tXpgkB37ceJ6ciLgLzOuqlNTOUU"
-TELEGRAM_CHAT_ID = "7957407326"
+# --- ⚠️ SECURE BROKER & ALERTS CREDENTIALS ⚠️ ---
+# Get free Paper Trading API keys by opening an account at app.alpaca.markets
+ALPACA_API_KEY = "YOUR_ALPACA_API_KEY_ID"
+ALPACA_SECRET_KEY = "YOUR_ALPACA_SECRET_KEY"
+ALPACA_BASE_URL = "https://alpaca.markets" # Secure Demo Trading Environment
 
-# Page Settings
-st.set_page_config(page_title="Quotex Elite 95% Sniper", page_icon="💎", layout="wide")
+TELEGRAM_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
+TELEGRAM_CHAT_ID = "YOUR_TELEGRAM_CHAT_ID"
 
-st.title("💎 QUOTEX STRICT 95% ACCURACY SNIPER ENGINE")
-st.write("Institutional-grade strategy filter. This engine completely REJECTS weak trades to maintain a strict 95%+ Win-Rate.")
+# Initialize Broker API Connection Connection
+try:
+    broker = tradeapi.REST(ALPACA_API_KEY, ALPACA_SECRET_KEY, ALPACA_BASE_URL, api_version='v2')
+    account_info = broker.get_account()
+    broker_connected = True
+except Exception as conn_error:
+    broker_connected = False
 
-# Session States for keeping track of Win/Loss Statistics
-if 'total_trades' not in st.session_state:
-    st.session_state.total_trades = 0
-if 'wins' not in st.session_state:
-    st.session_state.wins = 0
-if 'losses' not in st.session_state:
-    st.session_state.losses = 0
+# App Shell Layout Setup
+st.set_page_config(page_title="Pro Algorithmic Engine V7", page_icon="⚙️", layout="wide")
+st.title("⚙️ PRO INSTITUTIONAL AUTOMATED EXECUTION ENGINE")
+st.write("Live Realtime Market Scanner integrated with automated server-side order routing execution panels.")
 
-# --- CONTROL SIDEBAR ---
-st.sidebar.header("🕹️ Strict Bot Config")
-asset = st.sidebar.selectbox("🎯 SELECT PAIR", ["EURUSD=X", "GBPUSD=X", "USDJPY=X", "AUDUSD=X"])
-timeframe = st.sidebar.selectbox("⏳ CANDLE TIMEFRAME", ["1m", "5m"], index=0)
+if not broker_connected:
+    st.error(f"❌ Broker Authentication Failed! Please verify your API Key and Secret. Details: {conn_error}")
+else:
+    st.success(f"✅ Securely connected to Broker Account No: {account_info.account_number} | Available Paper Buying Power: ${float(account_info.cash):,.2f}")
 
-# --- ISLAMABAD LIVE CLOCK DISPLAY ---
-pk_tz = zoneinfo.ZoneInfo("Asia/Karachi")
-now_pk = datetime.now(pk_tz)
-st.sidebar.metric("⏱️ Islamabad Local Clock", now_pk.strftime("%H:%M:%S"))
+# --- BOT INTERFACE CONFIGURATION CONTROL PANEL ---
+st.sidebar.header("🕹️ Strategy Parameters")
+asset = st.sidebar.selectbox("🎯 SELECT ASSET", ["AAPL", "MSFT", "EURUSD=X", "GBPUSD=X"])
+timeframe = st.sidebar.selectbox("⏳ CANDLE INTERACTION TIMEFRAME", ["1m", "5m"], index=0)
+trade_qty = st.sidebar.number_input("📦 TRANSACTION VOLUME (Units/Shares)", min_value=1, value=1, step=1)
+scan_buffer = st.sidebar.slider("Execution Buffer Threshold (Seconds remaining to fire trade)", min_value=2, max_value=10, value=5, step=1)
 
-# --- WIN / LOSS DASHBOARD ---
-st.subheader("📊 Elite Trading Performance Dashboard")
-c_stat1, c_stat2, c_stat3, c_stat4 = st.columns(4)
-c_stat1.metric("95% Verified Signals", st.session_state.total_trades)
-c_stat2.metric("Win Sessions ✅", st.session_state.wins)
-c_stat3.metric("Loss Sessions ❌", st.session_state.losses)
-win_rate = (st.session_state.wins / st.session_state.total_trades * 100) if st.session_state.total_trades > 0 else 0.0
-c_stat4.metric("Live Accuracy Matrix 🎯", f"{win_rate:.1f}%" if st.session_state.total_trades > 0 else "95.0% Fixed Filter")
+# Activate/Deactivate Auto-Pilot System Switch Toggle
+bot_active = st.sidebar.toggle("🚀 ACTIVATE AUTO-PILOT DIRECT BROKER MODE", value=False)
 
 st.write("---")
+clock_place = st.empty()
+log_place = st.empty()
 
-# Main Trigger Button
-if st.button("🔥 TRIGGER 95% SNIPER SIGNALS (5s EXTREME LIQUIDITY SCAN)", use_container_width=True):
-    status_place = st.empty()
-    signal_found = False
-    direction = "HOLD"
-    entry_price = 0.0
-    last_mfi = 50.0
-    
-    # 1. 5-Second Ultra Scanning Phase
-    for sec in range(1, 6):
-        status_place.subheader(f"⚡ Testing Strict 95% Multi-Layer Conditions... Second {sec}/5")
+# --- CONTINUOUS LIVE RUNNING CLOCK AND STRATEGY CONTROLLER ---
+# Using Pakistan Standard Time (PKT) for timezone compliance
+pk_tz = zoneinfo.ZoneInfo("Asia/Karachi")
+now_pk = datetime.now(pk_tz)
+current_second = now_pk.second
+seconds_remaining = 60 - current_second
+
+with clock_place.container():
+    st.subheader("📊 LIVE SYSTEM TRACKING ENGINE")
+    c_clk1, c_clk2 = st.columns(2)
+    c_clk1.metric("⏱️ Islamabad Live System Time", now_pk.strftime("%H:%M:%S"))
+    c_clk2.metric("⏳ Candle Closing Clock Remaining", f"{seconds_remaining}s", delta="- Core Sync Active")
+
+# 3. AUTOMATED TRADING LOGIC TRIGGER
+if bot_active and current_second == (60 - scan_buffer):
+    with log_place.container():
+        st.toast("⚡ Scanning candle structure for breakout patterns...")
         try:
+            # Download low-latency market candles
             df = yf.download(asset, period="2d", interval=timeframe, progress=False)
             if not df.empty:
                 if isinstance(df.columns, pd.MultiIndex):
@@ -65,121 +75,61 @@ if st.button("🔥 TRIGGER 95% SNIPER SIGNALS (5s EXTREME LIQUIDITY SCAN)", use_
                 df.columns = [str(col).strip() for col in df.columns]
                 
                 close_prices = df['Close'].dropna()
-                high_prices = df['High'].dropna()
-                low_prices = df['Low'].dropna()
-                volumes = df['Volume'].dropna()
                 
-                if len(close_prices) >= 50:
-                    # 🚀 INSTITUTIONAL 95% ACCURACY MATHEMATICAL FILTERS
-                    ema50 = close_prices.ewm(span=50, adjust=False).mean()
-                    sma20 = close_prices.rolling(window=20).mean()
-                    std20 = close_prices.rolling(window=20).std()
+                if len(close_prices) >= 30:
+                    # Professional Technical Matrix (Moving Average Convergence Strategy)
+                    sma_fast = close_prices.rolling(window=10).mean()
+                    sma_slow = close_prices.rolling(window=30).mean()
                     
-                    # Elite Level Deviation (Only catches maximum outer boundaries)
-                    bb_up = sma20 + (2.35 * std20)    
-                    bb_low = sma20 - (2.35 * std20)
+                    last_price = float(close_prices.iloc[-1])
+                    last_fast = float(sma_fast.iloc[-1])
+                    last_slow = float(sma_slow.iloc[-1])
                     
-                    # MFI Volume Matrix Calculations
-                    typical_price = (high_prices + low_prices + close_prices) / 3
-                    raw_money_flow = typical_price * volumes
-                    price_diff = typical_price.diff()
-                    
-                    pos_flow = pd.Series(0.0, index=typical_price.index)
-                    neg_flow = pd.Series(0.0, index=typical_price.index)
-                    pos_flow[price_diff > 0] = raw_money_flow
-                    neg_flow[price_diff < 0] = raw_money_flow
-                    
-                    pos_mf14 = pos_flow.rolling(window=14).sum()
-                    neg_mf14 = neg_flow.rolling(window=14).sum()
-                    mfi = 100 - (100 / (1 + (pos_mf14 / (neg_mf14 + 1e-10))))
-                    
-                    entry_price = float(close_prices.iloc[-1])
-                    last_mfi = float(mfi.iloc[-1])
-                    last_bb_up = float(bb_up.iloc[-1])
-                    last_bb_low = float(bb_low.iloc[-1])
-                    last_ema = float(ema50.iloc[-1])
-                    
-                    # 🔴 CRITICAL PUT CONDITION (Strict Overload)
-                    if entry_price >= last_bb_up and last_mfi >= 78.0:
-                        direction = "PUT"
-                        signal_found = True
-                        break
+                    # Fetching existing positions from broker database to prevent spamming
+                    try:
+                        open_position = broker.get_position(asset)
+                        current_units = int(open_position.qty)
+                    except Exception:
+                        current_units = 0
                         
-                    # 🟢 CRITICAL CALL CONDITION (Strict Overload)
-                    elif entry_price <= last_bb_low and last_mfi <= 22.0:
-                        direction = "CALL"
-                        signal_found = True
-                        break
-        except Exception:
-            pass
-        time.sleep(1)
-        
-    status_place.empty()
-    
-    # 2. Output and Response
-    if signal_found:
-        clean_name = asset.replace("=X", "")
-        st.session_state.total_trades += 1
-        
-        st.components.v1.html('<audio autoplay><source src="https://mixkit.co" type="audio/wav"></audio>', height=0)
-        st.balloons()
-        
-        if direction == "PUT":
-            msg = f"🔴 **STRICT 95% DIRECTION: PUT (DOWN) 📉**\n💱 Pair: {clean_name}\n💵 Strike Rate: {entry_price:.5f}\n📊 Volume Overload (MFI): {last_mfi:.1f}\n⏳ Expiry: {timeframe}\n⚠️ Action: Open position instantly on Quotex next candle!"
-            st.error(f"🎯 ELITE REVERSAL ACCURACY TARGET LOCKED!\n\n{msg}")
-        else:
-            msg = f"🟢 **STRICT 95% DIRECTION: CALL (UP) 📈**\n💱 Pair: {clean_name}\n💵 Strike Rate: {entry_price:.5f}\n📊 Volume Overload (MFI): {last_mfi:.1f}\n⏳ Expiry: {timeframe}\n⚠️ Action: Open position instantly on Quotex next candle!"
-            st.success(f"🎯 ELITE REVERSAL ACCURACY TARGET LOCKED!\n\n{msg}")
-            
-        requests.post(f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage", json={"chat_id": TELEGRAM_CHAT_ID, "text": f"💎 **95% STRICT ALERT** 💎\n\n{msg}", "parse_mode": "Markdown"})
-        
-        # 3. Live Auto Verification System
-        wait_seconds = 60 if timeframe == "1m" else 300
-        st.info(f"⏳ Waiting {wait_seconds} seconds for candle closure to audit result...")
-        time.sleep(wait_seconds)
-        
-        try:
-            check_df = yf.download(asset, period="2d", interval=timeframe, progress=False)
-            if isinstance(check_df.columns, pd.MultiIndex):
-                check_df.columns = check_df.columns.get_level_values(0)
-            check_prices = check_df['Close'].dropna()
-            closing_price = float(check_prices.iloc[-1])
-            
-            st.write(f"📊 **Signal Evaluation:** Entry: `{entry_price:.5f}` | Close: `{closing_price:.5f}`")
-            
-            if direction == "CALL":
-                if closing_price > entry_price:
-                    st.success("✅ **RESULT: 95% SNIPER SIGNAL ACCURACY VERIFIED (WIN)!**")
-                    st.session_state.wins += 1
-                else:
-                    st.error("❌ **RESULT: CRITICAL GAP (LOSS). USE 1-STEP MTG.**")
-                    st.session_state.losses += 1
-            elif direction == "PUT":
-                if closing_price < entry_price:
-                    st.success("✅ **RESULT: 95% SNIPER SIGNAL ACCURACY VERIFIED (WIN)!**")
-                    st.session_state.wins += 1
-                else:
-                    st.error("❌ **RESULT: CRITICAL GAP (LOSS). USE 1-STEP MTG.**")
-                    st.session_state.losses += 1
-                    
-            st.rerun()
-        except Exception as e:
-            st.warning(f"Data audit lag: {e}")
-    else:
-        st.warning(f"⚠️ RISK DETECTED: Market metrics (MFI: {last_mfi:.1f}) are in intermediate zones. The bot has REJECTED this signal to protect your 95% accuracy score. Switch pairs or scan the next candle edge!")
+                    # 🟢 AUTOMATIC BUY ORDER ROUTING
+                    if last_fast > last_slow and current_units == 0:
+                        st.success(f"🚀 Bullish Momentum Confirmed! Placing Automatic Market BUY Order for {trade_qty} units...")
+                        broker.submit_order(symbol=asset, qty=trade_qty, side='buy', type='market', time_in_force='gtc')
+                        
+                        # Direct Notification to your Mobile Telegram App
+                        msg = f"🚀 **AUTO-TRADER PRO: BUY ORDER EXECUTED**\n🎯 Asset: {asset}\n💵 Executed Price: {last_price:.5f}\n📦 Volume: {trade_qty} Units"
+                        requests.post(f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage", json={"chat_id": TELEGRAM_CHAT_ID, "text": msg, "parse_mode": "Markdown"})
+                        st.balloons()
+                        
+                    # 🔴 AUTOMATIC SELL ORDER ROUTING (Liquidation Reversal)
+                    elif last_fast < last_slow and current_units > 0:
+                        st.error(f"📉 Bearish Trend Change Confirmed! Liquidating {current_units} open units...")
+                        broker.submit_order(symbol=asset, qty=current_units, side='sell', type='market', time_in_force='gtc')
+                        
+                        msg = f"📉 **AUTO-TRADER PRO: LIQUIDATION SELL EXECUTED**\n🎯 Asset: {asset}\n💵 Executed Price: {last_price:.5f}\n📦 Units Closed: {current_units}"
+                        requests.post(f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage", json={"chat_id": TELEGRAM_CHAT_ID, "text": msg, "parse_mode": "Markdown"})
+                    else:
+                        st.info("⚖️ System Equilibrium Status: Market tracking conditions stable. Standing by without trade entry.")
+        except Exception as runtime_err:
+            st.error(f"Execution System Exception: {runtime_err}")
+    time.sleep(2) # Enforces safety cooldown loop parameters
 
-# --- LIVE INTERACTIVE QUOTEX GRAPH GRAPHICS ---
-st.subheader(f"📈 Realtime {asset.replace('=X','')} Technical Candlestick Monitor")
+# --- LIVE INTERACTIVE GRAPHICAL CHART MONITOR ---
+st.subheader(f"📈 Realtime Technical Chart Matrix ({asset})")
 try:
-    graph_df = yf.download(asset, period="1d", interval=timeframe, progress=False)
-    if not graph_df.empty:
-        if isinstance(graph_df.columns, pd.MultiIndex):
-            graph_df.columns = graph_df.columns.get_level_values(0)
-            
+    chart_df = yf.download(asset, period="1d", interval=timeframe, progress=False)
+    if not chart_df.empty:
+        if isinstance(chart_df.columns, pd.MultiIndex):
+            chart_df.columns = chart_df.columns.get_level_values(0)
         fig = go.Figure(data=[go.Candlestick(
-            x=graph_df.index, open=graph_df['Open'], high=graph_df['High'], low=graph_df['Low'], close=graph_df['Close'], name='Live Candles'
+            x=chart_df.index, open=chart_df['Open'], high=chart_df['High'], low=chart_df['Low'], close=chart_df['Close'], name='Live Candlesticks'
         )])
-        fig.update_layout(template="plotly_dark", height=400, xaxis_rangeslider_visible=False, margin=dict(l=10, r=10, t=10, b=10))
+        fig.update_layout(template="plotly_dark", height=450, xaxis_rangeslider_visible=False, margin=dict(l=10, r=10, t=10, b=10))
         st.plotly_chart(fig, use_container_width=True)
 except Exception:
-    st.write("Loading live graphical components...")
+    st.info("Compiling live graphical stream layouts...")
+
+# Infinite loop sleep optimization interval to prevent interface tearing and maintain precise time tracking
+time.sleep(1)
+st.rerun()
