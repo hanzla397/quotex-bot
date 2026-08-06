@@ -1,28 +1,30 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import yfinance as yf
 import requests
 import time
 from datetime import datetime
 import zoneinfo
+from sklearn.ensemble import RandomForestClassifier
 
 # --- ⚠️ APNI DETAILS YAHAN LIKHEN ⚠️ ---
 TELEGRAM_TOKEN = "8996892978:AAEWuSd2tXpgkB37ceJ6ciLgLzOuqlNTOUU"
 TELEGRAM_CHAT_ID = "7957407326"
 
 # App UI Themes
-st.set_page_config(page_title="Quotex Islamabad Sniper V4", page_icon="⚡", layout="centered")
+st.set_page_config(page_title="Quotex AI Sniper V5", page_icon="🧠", layout="centered")
 
-st.title("⚡ QUOTEX ISLAMABAD AUTO-SNIPER V4")
-st.write("Live Realtime Countdown Tracker & Next-Candle Precision Predictor (Zero Clicks Required).")
+st.title("🧠 QUOTEX ISLAMABAD MACHINE LEARNING SNIPER (V5)")
+st.write("Artificial Intelligence predicting the exact direction of the NEXT candle based on live market training data.")
 
 # --- CUSTOM CONTROLS PANEL ---
-st.subheader("🕹️ Bot Configuration Controls")
+st.subheader("🕹️ AI Configuration Controls")
 col_ctrl1, col_ctrl2 = st.columns(2)
 
 with col_ctrl1:
     asset = st.selectbox("🎯 SELECT CURRENT PAIR", ["EURUSD=X", "GBPUSD=X", "USDJPY=X", "AUDUSD=X"])
-    timeframe = st.selectbox("⏳ SELECT CANDLE TIMEFRAME", ["1m", "5m", "15m"], index=0)
+    timeframe = st.selectbox("⏳ SELECT CANDLE TIMEFRAME", ["1m", "5m"], index=0)
 
 with col_ctrl2:
     trade_expiry = st.selectbox("⏳ SELECT TRADE EXPIRY TIME", ["1 Min", "2 Min", "3 Min", "5 Min"], index=0)
@@ -30,7 +32,7 @@ with col_ctrl2:
 
 st.write("---")
 
-# Placeholders for live looping updates without screen tearing
+# Placeholders for live looping updates
 clock_place = st.empty()
 signal_place = st.empty()
 
@@ -52,87 +54,89 @@ while True:
         st.subheader(f"📊 ISLAMABAD REALTIME TRACKING")
         col_c1, col_c2 = st.columns(2)
         col_c1.metric(label="⏱️ Islamabad Live Clock", value=now_pk.strftime("%H:%M:%S"))
-        col_c2.metric(label="⏳ Current Candle Time Remaining", value=f"{seconds_remaining}s", delta="- Next Candle Clock Sync", delta_color="inverse")
+        col_c2.metric(label="⏳ Current Candle Time Remaining", value=f"{seconds_remaining}s", delta="- AI Prediction Engine Sync", delta_color="inverse")
     
-    # 2. Automated Trigger System (Executes calculations when buffer threshold is breached)
+    # 2. Automated AI Trigger System (Executes when buffer threshold is hit)
     if seconds_remaining == scan_buffer:
         with signal_place.container():
-            st.toast("⚡ Target scanning window hit! Extracting volume momentum...")
+            st.toast("🧠 AI is training on live market data patterns...")
             
             try:
-                # Fetch fresh snapshot financial metrics
-                df = yf.download(asset, period="2d", interval=timeframe, progress=False)
+                # Fetch maximum historical candles for AI Training (5 Days data)
+                df = yf.download(asset, period="5d", interval=timeframe, progress=False)
                 
                 if not df.empty:
                     if isinstance(df.columns, pd.MultiIndex):
                         df.columns = df.columns.get_level_values(0)
                     df.columns = [str(col).strip() for col in df.columns]
                     
-                    close_prices = df['Close'].dropna()
-                    high_prices = df['High'].dropna()
-                    low_prices = df['Low'].dropna()
-                    volumes = df['Volume'].dropna()
+                    df = df.dropna()
                     
-                    if len(close_prices) >= 50:
-                        # Institutional Overlays Mapping
-                        ema50 = close_prices.ewm(span=50, adjust=False).mean()
-                        sma20 = close_prices.rolling(window=20).mean()
-                        std20 = close_prices.rolling(window=20).std()
-                        bb_up = sma20 + (1.9 * std20)   
-                        bb_low = sma20 - (1.9 * std20)
-                        
-                        # MFI Liquidity Traps Engine
-                        typical_price = (high_prices + low_prices + close_prices) / 3
-                        raw_money_flow = typical_price * volumes
-                        price_diff = typical_price.diff()
-                        
-                        pos_flow = pd.Series(0.0, index=typical_price.index)
-                        neg_flow = pd.Series(0.0, index=typical_price.index)
-                        pos_flow[price_diff > 0] = raw_money_flow
-                        neg_flow[price_diff < 0] = raw_money_flow
-                        
-                        pos_mf14 = pos_flow.rolling(window=14).sum()
-                        neg_mf14 = neg_flow.rolling(window=14).sum()
-                        mfi = 100 - (100 / (1 + (pos_mf14 / (neg_mf14 + 1e-10))))
-                        
-                        current_price = float(close_prices.iloc[-1])
-                        last_mfi = float(mfi.iloc[-1])
-                        last_bb_up = float(bb_up.iloc[-1])
-                        last_bb_low = float(bb_low.iloc[-1])
-                        
-                        clean_name = asset.replace("=X", "")
-                        decision = "HOLD"
-                        
-                        # --- PREDICTION STRATEGY ---
-                        # 🔴 EXACT NEXT CANDLE DOWN DIRECTION (PUT)
-                        if current_price >= (last_bb_up - 0.00015) or last_mfi > 68:
-                            decision = "PUT"
-                            msg = f"🔴 **PREDICTION: NEXT CANDLE IS PUT (DOWN) 📉**\n💱 Pair: {clean_name}\n💵 Execution Rate: {current_price:.5f}\n⏳ Trade Expiry: {trade_expiry}\n📊 Status: Open Trade exactly when countdown hits 0s!"
-                            st.error(f"🎯 ALGO EXECUTION REVERSAL TARGET TARGETED!\n\n{msg}")
-                        
-                        # 🟢 EXACT NEXT CANDLE UP DIRECTION (CALL)
-                        elif current_price <= (last_bb_low + 0.00015) or last_mfi < 32:
-                            decision = "CALL"
-                            msg = f"🟢 **PREDICTION: NEXT CANDLE IS CALL (UP) 📈**\n💱 Pair: {clean_name}\n💵 Execution Rate: {current_price:.5f}\n⏳ Trade Expiry: {trade_expiry}\n📊 Status: Open Trade exactly when countdown hits 0s!"
-                            st.success(f"🎯 ALGO EXECUTION REVERSAL TARGET TARGETED!\n\n{msg}")
+                    # --- AI FEATURE ENGINEERING ---
+                    # AI model ko sikhane ke liye features generate karna
+                    df['Return'] = df['Close'].pct_change()
+                    df['Body'] = df['Close'] - df['Open']
+                    df['High_Low'] = df['High'] - df['Low']
+                    
+                    # Target: Agli candle UP gayi (1) ya DOWN gayi (0)
+                    df['Target'] = np.where(df['Close'].shift(-1) > df['Close'], 1, 0)
+                    
+                    df = df.dropna()
+                    
+                    # Training Features Matrix
+                    features = ['Return', 'Body', 'High_Low']
+                    X = df[features]
+                    y = df['Target']
+                    
+                    # Split into train data (leave the last candle for live prediction)
+                    X_train = X.iloc[:-1]
+                    y_train = y.iloc[:-1]
+                    X_live = X.iloc[[-1]] # Exact current live candle features
+                    
+                    # --- MACHINE LEARNING MODEL TRAINING ---
+                    # Random Forest AI Classifier with 100 decision trees
+                    model = RandomForestClassifier(n_estimators=100, random_state=42)
+                    model.fit(X_train, y_train)
+                    
+                    # Predict Next Candle Direction and Probability Score
+                    prediction = model.predict(X_live)[0]
+                    probabilities = model.predict_proba(X_live)[0]
+                    ai_accuracy_score = float(probabilities[prediction] * 100)
+                    
+                    current_price = float(df['Close'].iloc[-1])
+                    clean_name = asset.replace("=X", "")
+                    
+                    # --- AI DECISION DISPATCHER ---
+                    # Trigger trade only if AI is highly confident (Accuracy > 60%)
+                    if ai_accuracy_score >= 60.0:
+                        if prediction == 1:
+                            # AI Predicts UP (CALL)
+                            msg = f"🟢 **AI PREDICTION: NEXT CANDLE IS CALL (UP) 📈**\n💱 Pair: {clean_name}\n💵 Entry Price: {current_price:.5f}\n🧠 AI Confidence Score: {ai_accuracy_score:.1f}%\n⏳ Trade Expiry: {trade_expiry}\n⚠️ Action: Enter trade exactly at 00s!"
+                            st.success(f"🎯 AI TARGET MATCHED WITH HIGH CONFIDENCE!\n\n{msg}")
                             
-                        if decision != "HOLD":
-                            # Loud Sound popup trigger alert in browser
+                            # Browser Sound
                             st.components.v1.html('<audio autoplay><source src="https://mixkit.co" type="audio/wav"></audio>', height=0)
                             st.balloons()
                             
-                            # Forward Instant Signal Payload directly to Mobile App
-                            url = f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage"
-                            payload = {"chat_id": TELEGRAM_CHAT_ID, "text": f"🚨 **ISLAMABAD AUTO SNIPER** 🚨\n\n{msg}", "parse_mode": "Markdown"}
-                            requests.post(url, json=payload)
+                            # Telegram Alert
+                            requests.post(f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage", json={"chat_id": TELEGRAM_CHAT_ID, "text": f"🧠 **AI PRO SNIPER SIGNAL** 🟢\n\n{msg}", "parse_mode": "Markdown"})
                         else:
-                            st.info(f"⚖️ **Current Candle Report:** Consolidation zone detected (MFI: {last_mfi:.1f}). No safe breakout for next candle. Waiting for next interval loop...")
+                            # AI Predicts DOWN (PUT)
+                            msg = f"🔴 **AI PREDICTION: NEXT CANDLE IS PUT (DOWN) 📉**\n💱 Pair: {clean_name}\n💵 Entry Price: {current_price:.5f}\n🧠 AI Confidence Score: {ai_accuracy_score:.1f}%\n⏳ Trade Expiry: {trade_expiry}\n⚠️ Action: Enter trade exactly at 00s!"
+                            st.error(f"🎯 AI TARGET MATCHED WITH HIGH CONFIDENCE!\n\n{msg}")
                             
+                            st.components.v1.html('<audio autoplay><source src="https://mixkit.co" type="audio/wav"></audio>', height=0)
+                            st.balloons()
+                            
+                            requests.post(f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage", json={"chat_id": TELEGRAM_CHAT_ID, "text": f"🧠 **AI PRO SNIPER SIGNAL** 🔴\n\n{msg}", "parse_mode": "Markdown"} )
+                    else:
+                        st.info(f"⚖️ **AI Analysis Report:** Market trend is uncertain. AI Confidence is low ({ai_accuracy_score:.1f}%). No trade suggested for the next candle.")
+                        
             except Exception as e:
                 pass
                 
-        # 2-second sleep cooldown parameter so it doesn't trigger loop within the same target second block
+        # 2-second sleep cooldown
         time.sleep(2)
         
-    # Microscopic refresh interval timing keeping system clock accurate and tightly bound
+    # Microscopic refresh interval timing
     time.sleep(0.8)
