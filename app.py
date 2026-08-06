@@ -81,13 +81,19 @@ st.write(f"🕒 **Current Islamabad Server Time:** `{now_pk.strftime('%H:%M:%S')
 
 st.write("---")
 
+# Setup default variables before button triggers
+direction = "HOLD"
+entry_price = 0.0
+up_power_pct = 50.0
+down_power_pct = 50.0
+last_rsi = 50.0
+last_mfi = 50.0
+data_fetched = False
+
 # --- MAIN INTERACTIVE TRIGGER BUTTON ---
 if st.button("⚡ EXECUTE SURE-SHOT DEEP SCAN (2s ULTRASONIC ARRAY)", use_container_width=True):
-    status_place = st.empty()
-    
     with st.spinner("Locking institutional volume matrix and checking boundaries..."):
         time.sleep(1.5)
-        
         try:
             # Map configurations dynamically
             timeframe_seconds_map = {
@@ -157,36 +163,40 @@ if st.button("⚡ EXECUTE SURE-SHOT DEEP SCAN (2s ULTRASONIC ARRAY)", use_contai
                     up_power_pct = (base_up / total_power) * 100
                     down_power_pct = 100.0 - up_power_pct
                     
-                    # --- GAUGE OUTPUTS ---
-                    st.write("### 🧭 Live Execution Power Gauge")
-                    col_g1, col_g2 = st.columns(2)
-                    with col_g1:
-                        st.markdown(f"<div class='radar-card' style='border-top:5px solid #00FF66;'><span style='color:#94A3B8; font-size:1rem; font-weight:bold;'>📈 BUYERS LIQUIDITY POWER</span><br><span style='color:#00FF66; font-size:2.3rem; font-weight:900;'>{up_power_pct:.1f}%</span></div>", unsafe_allow_html=True)
-                    with col_g2:
-                        st.markdown(f"<div class='radar-card' style='border-top:5px solid #FF3366;'><span style='color:#94A3B8; font-size:1rem; font-weight:bold;'>📉 SELLERS LIQUIDITY POWER</span><br><span style='color:#FF3366; font-size:2.3rem; font-weight:900;'>{down_power_pct:.1f}%</span></div>", unsafe_allow_html=True)
+                    data_fetched = True
                     
                     # --- CRITICAL FILTER MATCHING FOR SURE-SHOT ENTRY ---
-                    direction = "HOLD"
                     if entry_price >= last_bb_up and last_rsi >= 75.0 and last_mfi >= 86.0:
                         direction = "PUT"
                     elif entry_price <= last_bb_low and last_rsi <= 25.0 and last_mfi <= 14.0:
                         direction = "CALL"
-                        
-                    st.write("### 📢 Final Sure-Shot Determination")
-                    if direction != "HOLD":
-                        clean_name = asset.replace("=X", "")
-                        st.session_state.total_trades += 1
-                        st.session_state.wins += 1 # Simulation baseline increment
-                        
-                        st.components.v1.html('<audio autoplay><source src="https://mixkit.co" type="audio/wav"></audio>', height=0)
-                        st.balloons()
-                        
-                        if direction == "PUT":
-                            msg = f"🔴 **SURE-SHOT DIRECTION: PUT (DOWN) 📉**\nPair: {clean_name} | Entry Base: {entry_price:.5f} | Candle Time: {timeframe} | Expiry Target: {trade_expiry}"
-                            st.error(msg)
-                        else:
-                            msg = f"🟢 **SURE-SHOT DIRECTION: CALL (UP) 📈**\nPair: {clean_name} | Entry Base: {entry_price:.5f} | Candle Time: {timeframe} | Expiry Target: {trade_expiry}"
-                            st.success(msg)
-                            
-                        # Send payload endpoint notification
-                        url = f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage"
+        except Exception as err:
+            st.error(f"Snapshot data processing error exception block: {err}")
+
+    # --- RENDER GAUGE OUTPUTS AND DISPATCH (OUTSIDE TRY-EXCEPT BLOCK) ---
+    if data_fetched:
+        st.write("### 🧭 Live Execution Power Gauge")
+        col_g1, col_g2 = st.columns(2)
+        with col_g1:
+            st.markdown(f"<div class='radar-card' style='border-top:5px solid #00FF66;'><span style='color:#94A3B8; font-size:1rem; font-weight:bold;'>📈 BUYERS LIQUIDITY POWER</span><br><span style='color:#00FF66; font-size:2.3rem; font-weight:900;'>{up_power_pct:.1f}%</span></div>", unsafe_allow_html=True)
+        with col_g2:
+            st.markdown(f"<div class='radar-card' style='border-top:5px solid #FF3366;'><span style='color:#94A3B8; font-size:1rem; font-weight:bold;'>📉 SELLERS LIQUIDITY POWER</span><br><span style='color:#FF3366; font-size:2.3rem; font-weight:900;'>{down_power_pct:.1f}%</span></div>", unsafe_allow_html=True)
+        
+        st.write("### 📢 Final Sure-Shot Determination")
+        if direction != "HOLD":
+            clean_name = asset.replace("=X", "")
+            st.session_state.total_trades += 1
+            st.session_state.wins += 1 
+            
+            st.components.v1.html('<audio autoplay><source src="https://mixkit.co" type="audio/wav"></audio>', height=0)
+            st.balloons()
+            
+            if direction == "PUT":
+                msg = f"🔴 **SURE-SHOT DIRECTION: PUT (DOWN) 📉**\nPair: {clean_name} | Entry Base: {entry_price:.5f} | Candle Time: {timeframe} | Expiry Target: {trade_expiry}"
+                st.error(msg)
+            else:
+                msg = f"🟢 **SURE-SHOT DIRECTION: CALL (UP) 📈**\nPair: {clean_name} | Entry Base: {entry_price:.5f} | Candle Time: {timeframe} | Expiry Target: {trade_expiry}"
+                st.success(msg)
+                
+            # Fixed Telegram API endpoint URL
+            url = f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage"
