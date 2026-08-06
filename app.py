@@ -25,23 +25,9 @@ st.markdown("""
         font-weight: 800 !important;
         font-family: 'Courier New', Courier, monospace !important;
     }
-    .css-10trblm { color: #00FFCC !important; }
-    div.stButton > button:first-child {
-        background: linear-gradient(45deg, #00FFCC 0%, #0099FF 100%) !important;
-        color: #090A0F !important;
-        font-weight: bold !important;
-        border: none !important;
-        border-radius: 8px !important;
-        box-shadow: 0 4px 15px rgba(0, 255, 204, 0.4) !important;
-    }
     h1, h2, h3 {
         color: #00FFCC !important;
         text-shadow: 0 0 10px rgba(0, 255, 204, 0.3) !important;
-        font-family: 'Segoe UI', sans-serif !important;
-    }
-    .stSelectbox label, .stSlider label {
-        color: #94A3B8 !important;
-        font-weight: 600 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -62,7 +48,7 @@ with c_st2: st.markdown(f"<div style='color:#00FF66; font-size:1.2rem; font-weig
 with c_st3: st.markdown(f"<div style='color:#FF3366; font-size:1.2rem; font-weight:bold;'>❌ Losses: {st.session_state.losses}</div>", unsafe_allow_html=True)
 with c_st4:
     win_rate = (st.session_state.wins / st.session_state.total_trades * 100) if st.session_state.total_trades > 0 else 0.0
-    st.metric("Live Accuracy", f"{win_rate:.1f}%" if st.session_state.total_trades > 0 else "95.0% Fixed")
+    st.metric("Live Accuracy", f"{win_rate:.1f}%")
 
 st.write("---")
 
@@ -82,7 +68,6 @@ pk_tz = zoneinfo.ZoneInfo("Asia/Karachi")
 now_pk = datetime.now(pk_tz)
 current_second = now_pk.second
 
-# Calculate exact time remaining in candle dynamic shift
 timeframe_min = int(timeframe.replace("m", ""))
 total_sec = timeframe_min * 60
 passed_sec = (now_pk.minute % timeframe_min) * 60 + current_second
@@ -92,17 +77,14 @@ col_clk1, col_clk2 = st.columns(2)
 with col_clk1:
     st.markdown(f"<div style='background:rgba(0,255,252,0.05); padding:15px; border-left:4px solid #00FFCC; border-radius:4px;'>🕒 <b>Islamabad Clock:</b> <span style='font-family:monospace; font-size:1.5rem; color:#00FFCC;'>{now_pk.strftime('%H:%M:%S')}</span></div>", unsafe_allow_html=True)
 with col_clk2:
-    # Danger warning colors dynamically shifting under final 10 seconds
     border_color = "#FF3366" if seconds_remaining <= 10 else "#00FFCC"
     st.markdown(f"<div style='background:rgba(255,51,102,0.05); padding:15px; border-left:4px solid {border_color}; border-radius:4px;'>⏳ <b>Candle Time Remaining:</b> <span style='font-family:monospace; font-size:1.5rem; color:{border_color};'>{seconds_remaining}s</span></div>", unsafe_allow_html=True)
 
 st.write("---")
 
-# Main Notification Engine Placeholder
 signal_place = st.empty()
 
-# --- 5-SECOND ULTRASONIC SCAN TRIGGER WINDOW ---
-# Triggers calculation precisely at the critical final 5-second mark of the candle closure
+# --- 5-SECOND ULTRASONIC SCAN TRIGGER ---
 if seconds_remaining == 5:
     with signal_place.container():
         st.toast("⚡ Firing 5-second ultra precision analysis array...")
@@ -119,7 +101,6 @@ if seconds_remaining == 5:
                 volumes = df['Volume'].dropna()
                 
                 if len(close_prices) >= 40:
-                    # 95%+ Elite Formula Calculations
                     sma20 = close_prices.rolling(window=20).mean()
                     std20 = close_prices.rolling(window=20).std()
                     bb_up = sma20 + (2.35 * std20)    
@@ -144,28 +125,24 @@ if seconds_remaining == 5:
                     clean_name = asset.replace("=X", "")
                     direction = "HOLD"
                     
-                    # 🔴 EXT PUT SETUP
                     if entry_price >= last_bb_up and last_mfi >= 76.0:
                         direction = "PUT"
-                    # 🟢 EXT CALL SETUP
                     elif entry_price <= last_bb_low and last_mfi <= 24.0:
                         direction = "CALL"
                         
                     if direction != "HOLD":
                         st.session_state.total_trades += 1
-                        
-                        # Laser Beep Trigger Audio Overlay
                         st.components.v1.html('<audio autoplay><source src="https://mixkit.co" type="audio/wav"></audio>', height=0)
                         st.balloons()
                         
                         if direction == "PUT":
-                            msg = f"🔴 **SIGNAL: CHOOSE PUT (DOWN) 📉**\n💱 Pair: {clean_name}\n💵 Entry Price: {entry_price:.5f}\n⏳ Trade Expiry: {trade_expiry}\n📊 MFI Volume: {last_mfi:.1f}\n⚠️ Rule: Press DOWN on Quotex the millisecond clock hits 00s!"
-                            st.markdown(f"<div style='background:rgba(255,51,102,0.15); border:1px solid #FF3366; padding:20px; border-radius:8px; color:#FF3366; font-size:1.3rem; font-weight:bold;'>🔥 TARGET LOCKED: {msg}</div>", unsafe_allow_html=True)
+                            msg = f"🔴 **SIGNAL: CHOOSE PUT (DOWN) 📉**\nPair: {clean_name} | Entry: {entry_price:.5f} | Expiry: {trade_expiry}"
+                            st.error(msg)
                         else:
-                            msg = f"🟢 **SIGNAL: CHOOSE CALL (UP) 📈**\n💱 Pair: {clean_name}\n💵 Entry Price: {entry_price:.5f}\n⏳ Trade Expiry: {trade_expiry}\n📊 MFI Volume: {last_mfi:.1f}\n⚠️ Rule: Press UP on Quotex the millisecond clock hits 00s!"
-                            st.markdown(f"<div style='background:rgba(0,255,102,0.15); border:1px solid #00FF66; padding:20px; border-radius:8px; color:#00FF66; font-size:1.3rem; font-weight:bold;'>🔥 TARGET LOCKED: {msg}</div>", unsafe_allow_html=True)
+                            msg = f"🟢 **SIGNAL: CHOOSE CALL (UP) 📈**\nPair: {clean_name} | Entry: {entry_price:.5f} | Expiry: {trade_expiry}"
+                            st.success(msg)
                             
-                        # Send Notification to Telegram App
+                        # Telegram Alert Route
                         url = f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage"
                         requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": f"💎 **ELITE SNIPER ALERT** 💎\n\n{msg}", "parse_mode": "Markdown"})
                         
@@ -174,14 +151,37 @@ if seconds_remaining == 5:
                         time.sleep(wait_period)
                         
                         check_df = yf.download(asset, period="2d", interval=timeframe, progress=False)
-                        if isinstance(check_df.columns, pd.MultiIndex): check_df.columns = check_df.columns.get_level_values(0)
+                        if isinstance(check_df.columns, pd.MultiIndex): 
+                            check_df.columns = check_df.columns.get_level_values(0)
                         closing_p = float(check_df['Close'].dropna().iloc[-1])
                         
                         if (direction == "CALL" and closing_p > entry_price) or (direction == "PUT" and closing_p < entry_price):
                             st.session_state.wins += 1
-                            st.success(f"✅ **AUTO AUDIT:** Signal Winner! Entry: {entry_price:.5f} | Close: {closing_p:.5f}")
                         else:
                             st.session_state.losses += 1
-                            st.error(f"❌ **AUTO AUDIT:** Signal Lost. Entry: {entry_price:.5f} | Close: {closing_p:.5f}")
                         st.rerun()
                     else:
+                        st.info("⚖️ Candle Audit: Volatility stable. Criteria not met. Waiting...")
+        except Exception:
+            pass
+    time.sleep(2)
+
+# --- NEON LIVE GRAPH INTEGRATION ---
+st.write("### 📈 Live Candlestick Radar")
+try:
+    g_df = yf.download(asset, period="1d", interval=timeframe, progress=False)
+    if not g_df.empty:
+        if isinstance(g_df.columns, pd.MultiIndex): 
+            g_df.columns = g_df.columns.get_level_values(0)
+        fig = go.Figure(data=[go.Candlestick(
+            x=g_df.index, open=g_df['Open'], high=g_df['High'], low=g_df['Low'], close=g_df['Close'], name='Market'
+        )])
+        fig.update_layout(template="plotly_dark", height=380, xaxis_rangeslider_visible=False, 
+                          plot_bgcolor='#090A0F', paper_bgcolor='#090A0F',
+                          margin=dict(l=10, r=10, t=10, b=10))
+        st.plotly_chart(fig, use_container_width=True)
+except Exception:
+    pass
+
+time.sleep(1)
+st.rerun()
