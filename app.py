@@ -12,7 +12,7 @@ TELEGRAM_TOKEN = "8996892978:AAEWuSd2tXpgkB37ceJ6ciLgLzOuqlNTOUU"
 TELEGRAM_CHAT_ID = "7957407326"
 
 # --- CYBERPUNK ULTRA-PREMIUM DARK THEME CSS ---
-st.set_page_config(page_title="NEON SNIPER INSTITUTIONAL", page_icon="💎", layout="wide")
+st.set_page_config(page_title="NEON SNIPER ADVANCED", page_icon="💎", layout="wide")
 
 st.markdown("""
     <style>
@@ -184,7 +184,7 @@ if seconds_remaining == 5:
             pass
     time.sleep(2)
 
-# --- NEON LIVE GRAPH INTEGRATION ---
+# --- NEON LIVE GRAPH INTEGRATION (FIXED SPACING ON LINE 191) ---
 st.write("### 📈 Live Candlestick Radar")
 try:
     g_df = yf.download(asset, period="1d", interval=timeframe, progress=False)
