@@ -48,7 +48,7 @@ with c_st2: st.markdown(f"<div style='color:#00FF66; font-size:1.2rem; font-weig
 with c_st3: st.markdown(f"<div style='color:#FF3366; font-size:1.2rem; font-weight:bold;'>❌ Losses: {st.session_state.losses}</div>", unsafe_allow_html=True)
 with c_st4:
     win_rate = (st.session_state.wins / st.session_state.total_trades * 100) if st.session_state.total_trades > 0 else 0.0
-    st.metric("Live Accuracy", f"{win_rate:.1f}%" if st.session_state.total_trades > 0 else "95.2% Fixed Matrix")
+    st.metric("Live Accuracy", f"{win_rate:.1f}%")
 
 st.write("---")
 
@@ -104,11 +104,9 @@ if seconds_remaining == 5:
                     sma20 = close_prices.rolling(window=20).mean()
                     std20 = close_prices.rolling(window=20).std()
                     
-                    # ULTRA HIGH ACCURACY MULTIPLIER (2.50 Deviation for maximum trend defense)
                     bb_up = sma20 + (2.50 * std20)    
                     bb_low = sma20 - (2.50 * std20)
                     
-                    # Institutional Money Flow Index Matrix
                     typical_price = (high_prices + low_prices + close_prices) / 3
                     raw_money_flow = typical_price * volumes
                     price_diff = typical_price.diff()
@@ -120,7 +118,6 @@ if seconds_remaining == 5:
                     neg_mf14 = neg_flow.rolling(window=14).sum()
                     mfi = 100 - (100 / (1 + (pos_mf14 / (neg_mf14 + 1e-10))))
                     
-                    # ATR (Average True Range) for Volatility Defense
                     high_low = high_prices - low_prices
                     high_close = (high_prices - close_prices.shift()).abs()
                     low_close = (low_prices - close_prices.shift()).abs()
@@ -137,13 +134,9 @@ if seconds_remaining == 5:
                     clean_name = asset.replace("=X", "")
                     direction = "HOLD"
                     
-                    # --- CRITICAL FILTER EVALUATION ---
-                    # Only take trades when market has active volume and movement (ATR Filter)
                     if last_atr >= (avg_atr * 0.85):
-                        # 🔴 EXTREME REVERSAL DOWN (PUT): Price hits extreme band + Volume overbought
                         if entry_price >= last_bb_up and last_mfi >= 82.0:
                             direction = "PUT"
-                        # 🟢 EXTREME REVERSAL UP (CALL): Price breaks extreme support + Volume oversold
                         elif entry_price <= last_bb_low and last_mfi <= 18.0:
                             direction = "CALL"
                         
@@ -159,11 +152,9 @@ if seconds_remaining == 5:
                             msg = f"🟢 **PREDICTION: CHOOSE CALL (UP) 📈**\nPair: {clean_name} | Entry: {entry_price:.5f} | Expiry: {trade_expiry} | MFI: {last_mfi:.1f}"
                             st.success(msg)
                             
-                        # Secure Telegram Alert
                         url = f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage"
                         requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": f"💎 **95%+ SNIPER ALERT** 💎\n\n{msg}", "parse_mode": "Markdown"})
                         
-                        # --- AUTO AUDIT SYSTEM ---
                         wait_period = timeframe_min * 60
                         time.sleep(wait_period)
                         
@@ -179,15 +170,26 @@ if seconds_remaining == 5:
                         st.rerun()
                     else:
                         st.markdown("<div style='background:rgba(148,163,184,0.08); padding:15px; border-radius:6px; color:#94A3B8; text-align:center;'>⚖️ <b>System Filter:</b> Market metrics in unsafe zone. Signal REJECTED to preserve 95% accuracy score. Standby...</div>", unsafe_allow_html=True)
-                else:
-                    st.warning("Buffering core database structures...")
         except Exception:
             pass
     time.sleep(2)
 
-# --- NEON LIVE GRAPH INTEGRATION ---
+# --- NEON LIVE GRAPH INTEGRATION (FIXED INDENTATION) ---
 st.write("### 📈 Live Candlestick Radar")
 try:
     g_df = yf.download(asset, period="1d", interval=timeframe, progress=False)
     if not g_df.empty:
-        if isinstance(g_df.columns, pd.MultiIndex): 
+        if isinstance(g_df.columns, pd.MultiIndex):
+            g_df.columns = g_df.columns.get_level_values(0)
+        fig = go.Figure(data=[go.Candlestick(
+            x=g_df.index, open=g_df['Open'], high=g_df['High'], low=g_df['Low'], close=g_df['Close'], name='Market'
+        )])
+        fig.update_layout(template="plotly_dark", height=380, xaxis_rangeslider_visible=False, 
+                          plot_bgcolor='#05060A', paper_bgcolor='#05060A',
+                          margin=dict(l=10, r=10, t=10, b=10))
+        st.plotly_chart(fig, use_container_width=True)
+except Exception:
+    pass
+
+time.sleep(1)
+st.rerun()
