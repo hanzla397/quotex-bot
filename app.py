@@ -11,7 +11,7 @@ st.write("Click the button below to scan the market for instant accurate signals
 
 # Input fields for user so you can change details anytime inside the app
 st.subheader("🛠️ Connection Settings")
-telegram_token = st.text_input("8996892978:AAEWuSd2tXpgkB37ceJ6ciLgLzOuqlNTOUU", type="123456", help="BotFather se mila hua token")
+telegram_token = st.text_input("8587770630:AAG_2bgMMati3Lms-nFwnSrFGRRBzhx8Rbg", type="password", help="BotFather se mila hua token")
 telegram_chat_id = st.text_input("7957407326", help="userinfobot se mili hui ID")
 
 asset = st.selectbox("Select Asset Pair", ["EURUSD=X", "GBPUSD=X", "USDJPY=X", "AUDUSD=X"])
