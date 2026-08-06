@@ -173,7 +173,7 @@ if st.button("⚡ EXECUTE SURE-SHOT DEEP SCAN (2s ULTRASONIC ARRAY)", use_contai
         except Exception as err:
             st.error(f"Snapshot data processing error exception block: {err}")
 
-    # --- RENDER GAUGE OUTPUTS AND DISPATCH (OUTSIDE TRY-EXCEPT BLOCK) ---
+    # --- RENDER GAUGE OUTPUTS AND DISPATCH (OUTSIDE TRY-EXCEPT BLOCK FOR SAFETY) ---
     if data_fetched:
         st.write("### 🧭 Live Execution Power Gauge")
         col_g1, col_g2 = st.columns(2)
