@@ -184,8 +184,9 @@ if seconds_remaining == 5:
             pass
     time.sleep(2)
 
-# --- NEON LIVE GRAPH INTEGRATION (FIXED SPACING ON LINE 191) ---
+# --- NEON LIVE GRAPH INTEGRATION (FLATTENED TO ZERO-INDENT BREAKOUTS) ---
 st.write("### 📈 Live Candlestick Radar")
+g_df = pd.DataFrame()
+
 try:
     g_df = yf.download(asset, period="1d", interval=timeframe, progress=False)
-    if not g_df.empty:
