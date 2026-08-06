@@ -105,11 +105,9 @@ if seconds_remaining == 5:
                     sma20 = close_prices.rolling(window=20).mean()
                     std20 = close_prices.rolling(window=20).std()
                     
-                    # 🔥 CRITICAL UPGRADE: Institutional Deviation Multiplier locked at 2.65 to eliminate fakeouts
                     bb_up = sma20 + (2.65 * std20)    
                     bb_low = sma20 - (2.65 * std20)
                     
-                    # Institutional Money Flow Index (MFI)
                     typical_price = (high_prices + low_prices + close_prices) / 3
                     raw_money_flow = typical_price * volumes
                     price_diff = typical_price.diff()
@@ -121,14 +119,12 @@ if seconds_remaining == 5:
                     neg_mf14 = neg_flow.rolling(window=14).sum()
                     mfi = 100 - (100 / (1 + (pos_mf14 / (neg_mf14 + 1e-10))))
                     
-                    # Core RSI 14 Formula Filter
                     delta = close_prices.diff()
                     gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
                     loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
                     rs = gain / (loss + 1e-10)
                     rsi = 100 - (100 / (1 + rs))
                     
-                    # ATR (Average True Range) Volatility Defense Filter
                     high_low = high_prices - low_prices
                     high_close = (high_prices - close_prices.shift()).abs()
                     low_close = (low_prices - close_prices.shift()).abs()
@@ -146,13 +142,9 @@ if seconds_remaining == 5:
                     clean_name = asset.replace("=X", "")
                     direction = "HOLD"
                     
-                    # --- ENTERPRISE CRITICAL FILTER EVALUATION ---
-                    # 1. Volatility Filter: Ensures active institutional price injection
                     if last_atr >= (avg_atr * 0.90):
-                        # 2. 🔴 STRICT PUT SELECTION: Rejection wick outside 2.65 band + RSI Overbought + Volume Overload
                         if entry_price >= last_bb_up and last_rsi >= 72.0 and last_mfi >= 85.0:
                             direction = "PUT"
-                        # 3. 🟢 STRICT CALL SELECTION: Liquidity grab below 2.65 support + RSI Oversold + Volume Exhaustion
                         elif entry_price <= last_bb_low and last_rsi <= 28.0 and last_mfi <= 15.0:
                             direction = "CALL"
                         
@@ -168,11 +160,9 @@ if seconds_remaining == 5:
                             msg = f"🟢 **PREDICTION: CHOOSE CALL (UP) 📈**\nPair: {clean_name} | Entry: {entry_price:.5f} | Expiry: {trade_expiry} | RSI: {last_rsi:.1f} | MFI: {last_mfi:.1f}"
                             st.success(msg)
                             
-                        # Dispatch payload message
                         url = f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage"
                         requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": f"💎 **95%+ INSTITUTIONAL SIGNAL** 💎\n\n{msg}", "parse_mode": "Markdown"})
                         
-                        # --- AUTO AUDIT SYSTEM ---
                         wait_period = timeframe_min * 60
                         time.sleep(wait_period)
                         
@@ -181,6 +171,21 @@ if seconds_remaining == 5:
                             check_df.columns = check_df.columns.get_level_values(0)
                         closing_p = float(check_df['Close'].dropna().iloc[-1])
                         
-                        if (direction == "CALL" and closing_p > entry_price) or (direction == "PUT" and closing_p < entry_price):
+                        if direction == "CALL" and closing_p > entry_price:
+                            st.session_state.wins += 1
+                        elif direction == "PUT" and closing_p < entry_price:
                             st.session_state.wins += 1
                         else:
+                            st.session_state.losses += 1
+                        st.rerun()
+                    else:
+                        st.markdown("<div style='background:rgba(148,163,184,0.05); border:1px solid rgba(148,163,184,0.15); padding:15px; border-radius:6px; color:#94A3B8; text-align:center;'>⚖️ <b>Institutional Filter:</b> Market structure is unstable. Signal REJECTED to shield your 95% Win-Rate. Monitoring candle edges...</div>", unsafe_allow_html=True)
+        except Exception:
+            pass
+    time.sleep(2)
+
+# --- NEON LIVE GRAPH INTEGRATION ---
+st.write("### 📈 Live Candlestick Radar")
+try:
+    g_df = yf.download(asset, period="1d", interval=timeframe, progress=False)
+    if not g_df.empty:
