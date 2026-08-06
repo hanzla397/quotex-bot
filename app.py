@@ -3,40 +3,44 @@ import pandas as pd
 import yfinance as yf
 import requests
 import time
+from datetime import datetime
 
 # --- ⚠️ APNI DETAILS YAHAN LIKHEN ⚠️ ---
 TELEGRAM_TOKEN = "8996892978:AAEWuSd2tXpgkB37ceJ6ciLgLzOuqlNTOUU"
 TELEGRAM_CHAT_ID = "7957407326"
 
 # App Configuration
-st.set_page_config(page_title="Quotex Fast Trigger Bot", page_icon="⚡", layout="centered")
+st.set_page_config(page_title="Quotex Next-Candle Sniper", page_icon="🎯", layout="centered")
 
-st.title("⚡ Quotex Ultra-Fast Reversal Trigger Bot")
-st.write("Click the button below. The bot will scan the market every second and give an instant signal the MOMENT an entry is found (Max 10 seconds search).")
+st.title("🎯 Quotex Next-Candle Sniper Bot")
+st.write("Predicts the direction of the NEXT candle by analyzing the exact final seconds of the current candle.")
 
 # Selection Settings
 asset = st.selectbox("Select Asset Pair", ["EURUSD=X", "GBPUSD=X", "USDJPY=X", "AUDUSD=X"])
-timeframe = st.selectbox("Select Strategy Level", ["1m", "5m"], index=0)
+timeframe = st.selectbox("Select Candle Timeframe", ["1m", "5m"], index=0)
+
+# USER CONTROL: Apni marzi ke seconds select karen
+scan_seconds = st.slider("Select Final Scanning Seconds Remaining on Current Candle", min_value=3, max_value=15, value=5, step=1)
 
 st.write("---")
 
 # Main Trigger Button
-if st.button("⚡ FIND INSTANT SIGNAL (MAX 10s SEARCH)", use_container_width=True):
+if st.button(f"⚡ PREDICT NEXT CANDLE (SCAN LAST {scan_seconds} SECONDS)", use_container_width=True):
     status_place = st.empty()
     signal_found = False
     msg = ""
     direction = "HOLD"
     
-    # Loop runs for maximum 10 seconds, checking every 1 second
-    for second in range(1, 11):
-        status_place.subheader(f"🔍 Searching live candles... Second {second}/10")
+    # Precise looping for the chosen maximum seconds buffer
+    for second in range(1, scan_seconds + 1):
+        status_place.subheader(f"⏳ Reading closing momentum... Second {second}/{scan_seconds}")
         
         try:
-            # Fetch very fresh data
+            # Fetch extremely fresh current price data
             df = yf.download(asset, period="2d", interval=timeframe, progress=False)
             
             if not df.empty:
-                # Flat columns formatting
+                # Flat columns structure fix
                 if isinstance(df.columns, pd.MultiIndex):
                     df.columns = df.columns.get_level_values(0)
                 df.columns = [str(col).strip() for col in df.columns]
@@ -44,11 +48,11 @@ if st.button("⚡ FIND INSTANT SIGNAL (MAX 10s SEARCH)", use_container_width=Tru
                 close_prices = df['Close'].dropna()
                 
                 if len(close_prices) >= 50:
-                    # Mathematical Indicators
+                    # Precision Math Overlays
                     ema50 = close_prices.ewm(span=50, adjust=False).mean()
                     sma20 = close_prices.rolling(window=20).mean()
                     std20 = close_prices.rolling(window=20).std()
-                    bb_up = sma20 + (1.9 * std20)   # High precision boundaries
+                    bb_up = sma20 + (1.9 * std20)   
                     bb_low = sma20 - (1.9 * std20)
                     
                     delta = close_prices.diff()
@@ -65,41 +69,39 @@ if st.button("⚡ FIND INSTANT SIGNAL (MAX 10s SEARCH)", use_container_width=Tru
                     
                     clean_name = asset.replace("=X", "")
                     
-                    # --- CRITICAL REVERSAL CHECK (Instant Detection) ---
-                    # 🔴 PUT SIGNAL (Price touches upper band & RSI is high)
+                    # --- NEXT CANDLE MOMENTUM FILTER ---
+                    # 🔴 NEXT CANDLE PUT DIRECTION
                     if current_price >= (last_bb_up - 0.0001) and last_rsi > 60:
                         direction = "PUT"
-                        msg = f"🔴 **PUT (DOWN) 📉**\n💱 Asset: {clean_name}\nPrice: {current_price:.5f}\nTime: {time.strftime('%H:%M:%S')}"
-                        st.error(f"🔥 INSTANT SIGNAL FOUND AT SECOND {second}!\n\n{msg}")
+                        msg = f"🔴 **NEXT CANDLE: PUT (DOWN) 📉**\n💱 Asset: {clean_name}\n💵 Strike Price: {current_price:.5f}\n⏱️ Detected at final {scan_seconds - second + 1}s"
+                        st.error(f"🔥 NEXT CANDLE PREDICTION FOUND AT SECOND {second}!\n\n{msg}")
                         signal_found = True
-                        break # Stop searching immediately and return signal
+                        break 
                         
-                    # 🟢 CALL SIGNAL (Price touches lower band & RSI is low)
+                    # 🟢 NEXT CANDLE CALL DIRECTION
                     elif current_price <= (last_bb_low + 0.0001) and last_rsi < 40:
                         direction = "CALL"
-                        msg = f"🟢 **CALL (UP) 📈**\n💱 Asset: {clean_name}\nPrice: {current_price:.5f}\nTime: {time.strftime('%H:%M:%S')}"
-                        st.success(f"🔥 INSTANT SIGNAL FOUND AT SECOND {second}!\n\n{msg}")
+                        msg = f"🟢 **NEXT CANDLE: CALL (UP) 📈**\n💱 Asset: {clean_name}\n💵 Strike Price: {current_price:.5f}\n⏱️ Detected at final {scan_seconds - second + 1}s"
+                        st.success(f"🔥 NEXT CANDLE PREDICTION FOUND AT SECOND {second}!\n\n{msg}")
                         signal_found = True
-                        break # Stop searching immediately and return signal
+                        break 
                         
         except Exception as e:
-            # Skip any network glitch and retry next second
             pass
             
-        time.sleep(1) # Wait 1 second before checking again
+        time.sleep(1) 
         
-    # Clear the searching text
     status_place.empty()
     
-    # Final Action Execution
+    # Trigger final notification payloads
     if signal_found and direction != "HOLD":
-        # Play loud sound in browser instantly
+        # Play browser sound to alert the trader instantly
         st.components.v1.html('<audio autoplay><source src="https://mixkit.co" type="audio/wav"></audio>', height=0)
         st.balloons()
         
-        # Send instant message to Telegram Mobile app
+        # Send instant mobile push via Telegram
         url = f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage"
-        payload = {"chat_id": TELEGRAM_CHAT_ID, "text": f"⚡ **FAST TRIGGER SIGNAL** ⚡\n\n{msg}", "parse_mode": "Markdown"}
+        payload = {"chat_id": TELEGRAM_CHAT_ID, "text": f"🎯 **NEXT CANDLE SNIPER** 🎯\n\n{msg}", "parse_mode": "Markdown"}
         requests.post(url, json=payload)
     else:
-        st.warning("⚖️ Market is in the middle zone right now. No high-accuracy breakout found within 10 seconds. Try changing the asset pair or trigger again.")
+        st.warning(f"⚖️ Current candle is closing flat in the middle zone. No breakout setup found within the last {scan_seconds} seconds. Wait for the next candle or switch the asset.")
